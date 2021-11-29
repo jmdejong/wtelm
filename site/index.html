@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Main</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="build/main.js"></script>
+</head>
+<body class="show-notes show-octaves show-fingering show-lyrics show-staves">
+  <h1>Tin Whistle Tab Creator</h1>
+  <div id="elm-node"></div>
+  <script>
+"use strict";
+
+Elm.Main.init({
+    node: document.getElementById("elm-node")
+})
+  </script>
+</body>
+</html>
