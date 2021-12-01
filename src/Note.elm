@@ -5,7 +5,6 @@ module Note exposing
   , from
   , Letter(..)
   , RelativeNote(..)
-  , Token(..)
   , WrittenNote(..)
   )
 
@@ -83,9 +82,6 @@ from (Pitch baseCode) (Pitch noteCode) =
   RelativeNote (noteCode - baseCode)
 
 type alias AbsoluteNote = {pitch: Pitch, appliedOffset: Int}
-
-type Token = Note WrittenNote | Rest | Slur | Bar
-
 
 type WrittenNote = WrittenNote {letter: Letter, offset: Int, octave: Int}
 

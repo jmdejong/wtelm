@@ -26,8 +26,8 @@ import Note
 import Note exposing 
   ( Letter(..)
   , WrittenNote(..)
-  , Token(..)
   )
+import Tab exposing (Token(..))
 
 
 
