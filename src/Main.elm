@@ -10,22 +10,26 @@ import Html exposing
   ( Html
   , Attribute
   , div
+  , span
   , input
   , textarea
   , text
   , ul
   , li
+  , sup
   )
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import WTFormat
 import Parser
+import ParserExt
 import Note exposing 
   ( RelativeNote(..)
-  , AbsoluteNote
+  , WrittenNote(..)
+  , Pitch
   , Letter(..)
-  , absolute
-  , from
+  , absolutePitch
+  , Token(..)
   )
 
 
@@ -42,51 +46,48 @@ main = Browser.sandbox { init = init, update = update, view = view }
 
 type alias Model = 
   { tabText: String
-  , base: AbsoluteNote
-  , key: AbsoluteNote
+  , base: Pitch
+  , key: Pitch
   }
 
 
 init : Model
-init = { tabText = "", base = absolute D 4, key = absolute D 4 }
+init = { tabText = "", base = absolutePitch D 4, key = absolutePitch D 4 }
 
 
-type Finger = O | H | L | X | Z
+type Finger = O | H | L | X | Unknown
 
 type alias Fingering = List Finger
-
-parseNote : String -> Maybe RelativeNote
-parseNote text = Nothing
   
 
-toFingering : RelativeNote -> Maybe Fingering
+toFingering : RelativeNote -> (Fingering, Bool)
 toFingering (RelativeNote index) =
   case index of
-    0  -> Just [X, X, X, X, X, X]
-    1  -> Just [X, X, X, X, X, L]
-    2  -> Just [X, X, X, X, X, O]
-    3  -> Just [X, X, X, X, L, O]
-    4  -> Just [X, X, X, X, O, O]
-    5  -> Just [X, X, X, O, O, O]
-    6  -> Just [X, X, H, O, O, O]
-    7  -> Just [X, X, O, O, O, O]
-    8  -> Just [X, H, O, O, O, O]
-    9  -> Just [X, O, O, O, O, O]
-    10 -> Just [O, X, X, O, O, O]
-    11 -> Just [O, O, O, O, O, O]
-    12 -> Just [O, X, X, X, X, X]
-    13 -> Just [X, X, X, X, X, L]
-    14 -> Just [X, X, X, X, X, O]
-    15 -> Just [X, X, X, X, L, O]
-    16 -> Just [X, X, X, X, O, O]
-    17 -> Just [X, X, X, O, O, O]
-    18 -> Just [X, X, O, X, X, O]
-    19 -> Just [X, X, O, O, O, O]
-    20 -> Just [X, O, X, O, O, O]
-    21 -> Just [X, O, O, O, O, O]
-    22 -> Just [O, X, O, O, O, O]
-    23 -> Just [O, O, O, O, O, O]
-    _ -> Nothing
+    0  -> ([X, X, X, X, X, X], True)
+    1  -> ([X, X, X, X, X, L], True)
+    2  -> ([X, X, X, X, X, O], True)
+    3  -> ([X, X, X, X, L, O], True)
+    4  -> ([X, X, X, X, O, O], True)
+    5  -> ([X, X, X, O, O, O], True)
+    6  -> ([X, X, H, O, O, O], True)
+    7  -> ([X, X, O, O, O, O], True)
+    8  -> ([X, H, O, O, O, O], True)
+    9  -> ([X, O, O, O, O, O], True)
+    10 -> ([O, X, X, O, O, O], True)
+    11 -> ([O, O, O, O, O, O], True)
+    12 -> ([O, X, X, X, X, X], True)
+    13 -> ([X, X, X, X, X, L], True)
+    14 -> ([X, X, X, X, X, O], True)
+    15 -> ([X, X, X, X, L, O], True)
+    16 -> ([X, X, X, X, O, O], True)
+    17 -> ([X, X, X, O, O, O], True)
+    18 -> ([X, X, H, O, O, O], True)
+    19 -> ([X, X, O, O, O, O], True)
+    20 -> ([X, O, X, O, O, O], True)
+    21 -> ([X, O, O, O, O, O], True)
+    22 -> ([O, X, O, O, O, O], True)
+    23 -> ([O, O, O, O, O, O], True)
+    _  -> (List.repeat 6 Unknown, False)
 
 -- UPDATE
 
@@ -103,36 +104,32 @@ update msg model =
 
 -- VIEW
 
-textToNotes : String -> List RelativeNote
-textToNotes text =
-  text
-    |> String.words
-    |> List.filterMap parseNote
-
 view : Model -> Html Msg
 view model =
   div []
     [ textarea [ value model.tabText, onInput TabChange ] []
-    , viewNoteLine model model.tabText
-    --, div [] [ text (String.reverse model.tabText) ]
-    --, div [] ( [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] |> List.map (\i -> viewNote (RelativeNote i)))
+    , String.lines model.tabText
+      |> List.map (viewNoteLine model)
+      |> List.intersperse (div [class "line-break"] [])
+      |> div []
     ]
 
 viewNoteLine : Model -> String -> Html Msg
-viewNoteLine model line = Parser.run WTFormat.parseLine line
-  |> Result.withDefault []
-  |> List.filterMap 
-    (\token ->
+viewNoteLine model line =
+  case Parser.run WTFormat.parseLine line of
+    Ok tokens -> tokens
+      |> List.map (viewToken model.base model.key)
+      |> div []
+    Err deadEnds -> div [class "invalid-line"] [text <| ParserExt.deadEndsToString deadEnds]
+
+
+viewToken : Pitch -> Pitch -> Token -> Html Msg
+viewToken base key token = 
       case token of
-        WTFormat.Note note -> Just
-          (
-            WTFormat.toAbsolute model.base note 
-              |> from model.key
-              |> viewNote
-          )
-        _ -> Nothing
-    )
-  |> div []
+        Note note -> viewNote base key note
+        Rest -> span [class "spacer"] []
+        Bar -> span [class "bar"] [text "|"]
+        Slur -> span [class "slur"] [text "("]
 
 fingerToken : Finger -> String
 fingerToken finger =
@@ -141,31 +138,58 @@ fingerToken finger =
     X -> "\u{25cf}"
     H -> "\u{25d0}"
     L -> "\u{25d1}"
-    Z -> "?"
+    Unknown -> "?"
 
-viewNote : RelativeNote -> Html Msg
-viewNote note =
-  note
-    |> toFingering
-    |> Maybe.map viewFingering
-    |> Maybe.withDefault errorFingering
+viewNote : Pitch -> Pitch -> WrittenNote -> Html Msg
+viewNote base key note =
+  let
+    whistleNote = note |> Note.toAbsolute base |> Note.from key
+    (fingering, isKnown) = toFingering whistleNote
+  in
+  div
+    [ class <| if isKnown then "tab-note" else "tab-note error"]
+    ((List.map viewFinger fingering) ++ [viewNoteText note])
     
-    
+
+viewNoteText : WrittenNote -> Html Msg
+viewNoteText (WrittenNote note) =
+  li [ class "tab-note-text" ]
+    [ span [class "tab-note-letter"] 
+      [ viewLetter note.letter 
+        |> (if note.octave > 0 then Char.toUpper else Char.toLower)
+        |> String.fromChar
+        |> text
+      , if note.offset > 0 then
+          span [class "sharp"] [text <| String.repeat note.offset "\u{266f}"]
+        else if note.offset < 0 then
+          span [class "flat"] [text <| String.repeat (-note.offset) "\u{266d}"]
+        else
+          text ""
+      ]
+    , sup [class "note-octave"] [ text (String.repeat note.octave "+")]
+    ]
+
+viewLetter : Letter -> Char
+viewLetter letter = case letter of 
+  A -> 'a'
+  B -> 'b'
+  C -> 'c'
+  D -> 'd'
+  E -> 'e'
+  F -> 'f'
+  G -> 'g'
+  
+
 viewFinger : Finger -> Html Msg
 viewFinger finger =
   li
     [ class "finger" ]
     [ text (fingerToken finger) ]
 
-viewFingering : Fingering -> Html Msg
-viewFingering fingering =
-  ul
-    [ class "tab-note"] 
-    (fingering |> List.map viewFinger)
-
 errorFingering : Html Msg
 errorFingering =
   ul 
     [ class "tab-note error"]
-      ([Z, Z, Z, Z, Z, Z] |> List.map viewFinger)
-  
+      (List.repeat 6 Unknown |> List.map viewFinger)
+
+

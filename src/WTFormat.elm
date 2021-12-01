@@ -1,10 +1,5 @@
 module WTFormat exposing 
-  ( WTNote
-  , parseWTNote
-  , newWTNote
-  , Token(..)
-  , parseLine
-  , toAbsolute
+  ( parseLine
   )
 
 import Parser exposing 
@@ -27,17 +22,13 @@ import Parser exposing
   , Step(..)
   , end
   )
+import Note
 import Note exposing 
-  ( AbsoluteNote
-  , Letter(..)
-  , RelativeNote(..)
-  , absoluteNext
-  , add
+  ( Letter(..)
+  , WrittenNote(..)
+  , Token(..)
   )
 
-type Token = Note WTNote | Space | Slur | Bar
-
-type WTNote = WTNote {letter: Letter, offset: Int, octave: Int}
 
 
 type alias ParsedNote = {letter: {letter: Letter, isUpper: Bool}, sharps: Int, flats: Int, octaves: Int}
@@ -56,7 +47,7 @@ parseLine =
 parseToken : Parser Token
 parseToken =
   oneOf
-    [ succeed Space
+    [ succeed Rest
       |. token " "
       |. spaces
     , succeed Slur
@@ -64,7 +55,7 @@ parseToken =
     , succeed Bar
       |. token "|"
     , succeed Note
-      |= parseWTNote
+      |= parseWrittenNote
     ]
 
 noteLetterFromChar : Char -> Maybe Letter
@@ -79,30 +70,17 @@ noteLetterFromChar c =
     'g' -> Just G
     _ -> Nothing
 
-newWTNote : Letter -> Int -> Int -> WTNote
-newWTNote letter offset octave =
-  WTNote
-    { letter = letter
-    , offset = offset
-    , octave = octave
-    }
-
-toAbsolute : AbsoluteNote -> WTNote -> AbsoluteNote
-toAbsolute base (WTNote note) =
-  absoluteNext base note.letter
-    |> add (RelativeNote <| 12 * note.octave + note.offset)
-
-writtenNoteFromParsedNote : ParsedNote -> WTNote
+writtenNoteFromParsedNote : ParsedNote -> WrittenNote
 writtenNoteFromParsedNote parsedNote =
-  WTNote
+  WrittenNote
     { letter = parsedNote.letter.letter
     , offset = parsedNote.sharps - parsedNote.flats
     , octave = parsedNote.octaves + if parsedNote.letter.isUpper then 1 else 0
     }
 
 
-parseWTNote: Parser WTNote
-parseWTNote =
+parseWrittenNote: Parser WrittenNote
+parseWrittenNote =
   parseNote
     |> map writtenNoteFromParsedNote
 
