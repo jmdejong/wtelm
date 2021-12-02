@@ -1,9 +1,4 @@
 module Main exposing (..)
--- A text input for reversing text. Very useful!
---
--- Read how it works:
---   https://guide.elm-lang.org/architecture/text_fields.html
---
 
 import Browser
 import Html exposing 
@@ -28,7 +23,7 @@ import Note exposing
   , absolutePitch
   )
 import Tab exposing ( TabSettings )
-import TabRenderer exposing ( renderTabLine )
+import TabRenderer exposing ( renderTab )
 
 
 
@@ -77,22 +72,14 @@ view : Model -> Html Msg
 view model =
   div []
     [ textarea [ value model.tabText, onInput TabChange ] []
-    , renderTab model.tabSettings model.tabText
+    , viewTab model.tabSettings model.tabText
     ]
 
     
-renderTab : TabSettings -> String -> Html msg
-renderTab settings tabText =
-  String.lines tabText
-    |> List.map (viewNoteLine settings)
-    |> List.intersperse (div [class "line-break"] [])
-    |> div []
-
-
-viewNoteLine : TabSettings -> String -> Html msg
-viewNoteLine settings line =
-  case Parser.run WTFormat.parseLine line of
-    Ok tokens -> renderTabLine settings tokens
+viewTab : TabSettings -> String -> Html msg
+viewTab settings tabText =
+  case Parser.run WTFormat.parseTabText tabText of 
+    Ok lines -> renderTab settings lines
     Err deadEnds -> div [class "invalid-line"] [text <| ParserExt.deadEndsToString deadEnds]
 
 

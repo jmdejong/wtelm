@@ -1,6 +1,4 @@
-module WTFormat exposing 
-  ( parseLine
-  )
+module WTFormat exposing ( parseTabText )
 
 import Parser exposing 
   ( Parser
@@ -21,28 +19,55 @@ import Parser exposing
   , loop
   , Step(..)
   , end
+  , lineComment
+  , chompUntilEndOr
+  , sequence
+  , Trailing(..)
   )
 import Note
 import Note exposing 
   ( Letter(..)
   , WrittenNote(..)
   )
-import Tab exposing (Token(..))
+import Tab exposing (Token(..), Line(..))
 
 
 
 type alias ParsedNote = {letter: {letter: Letter, isUpper: Bool}, sharps: Int, flats: Int, octaves: Int}
 
-parseLine : Parser (List Token)
-parseLine =
+parseTabText : Parser (List Line)
+parseTabText =
+  repeat end <|
+    oneOf
+      [ prefixedLine "---"
+        |> map Heading
+      , prefixedLine "--"
+        |> map (String.split " ")
+        |> map Lyrics
+      , prefixedLine "-"
+        |> map Comment
+      , parseNoteLine 
+        |> map Notes
+      ]
+
+prefixedLine : String -> Parser String
+prefixedLine prefix = succeed identity
+  |. token prefix
+  |= getChompedString (chompUntilEndOr "\n")
+  
+
+repeat : Parser () -> Parser a -> Parser (List a)
+repeat final continue = 
   loop [] (\state ->
     oneOf
-      [ succeed (\s -> Loop (s :: state))
-        |= parseToken
-      , token "\n" |> map (\_ -> Done (List.reverse state))
-      , end |> map (\_ -> Done (List.reverse state))
+      [ final |> map (\_ -> Done (List.reverse state))
+      , continue |> map (\s -> Loop (s :: state))
       ]
   )
+
+parseNoteLine : Parser (List Token)
+parseNoteLine =
+  repeat (oneOf [token "\n", end]) parseToken
 
 parseToken : Parser Token
 parseToken =
