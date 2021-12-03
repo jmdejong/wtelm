@@ -3,9 +3,11 @@ module Note exposing
   , absolutePitch
   , toAbsolute
   , from
+  , add
   , Letter(..)
   , RelativeNote(..)
   , WrittenNote(..)
+  , toWritten
   )
 
 type Pitch = Pitch Int
@@ -35,11 +37,17 @@ absoluteNext (Pitch code) letter =
     |> (+) code
     |> Pitch
 
-lettersByPitch : Pitch -> ((Letter, Int), (Letter, Int))
-lettersByPitch (Pitch code) =
+toWritten : Pitch -> List WrittenNote
+toWritten (Pitch code) =
   let
-    sf s f = ((s, 1), (f, -1))
-    o l = ((l, 0), (l, 0))
+    n letter offset =
+      WrittenNote 
+        { letter = letter
+        , offset = offset
+        , octave = (code - offset) // 12
+        }
+    sf s f = [(n s 1), (n f -1)]
+    o l = [(n l 0)]
   in
   case modBy 12 code of
     0 -> o C
@@ -57,19 +65,21 @@ lettersByPitch (Pitch code) =
     _ -> o C -- should never occur because of the modBy 12
 
     
-toLetter : Bool -> Pitch -> (Letter, Int)
-toLetter isFlat pitch =
-  lettersByPitch pitch
-    |> if isFlat then Tuple.second else Tuple.first
+--toLetter : Bool -> Pitch -> (Letter, Int)
+--toLetter isFlat pitch =
+  --lettersByPitch pitch
+    --|> if isFlat then Tuple.second else Tuple.first
 
-toWritten : Pitch -> Bool -> Pitch -> WrittenNote
-toWritten key isFlat pitch =
-  let
-    (letter, offset) = toLetter isFlat pitch 
-    (RelativeNote difference) = from key pitch
-    octave = difference // 12
-  in
-  WrittenNote {letter = letter, offset = offset, octave = octave}
+--toWritten : Pitch -> [WrittenNote]
+--toWritten pitch =
+  --lettersByPitch pitch
+    --|> ((letter, offset) -> 
+  --let
+    --(letter, offset) = toLetter isFlat pitch 
+    --(RelativeNote difference) = from key pitch
+    --octave = difference // 12
+  --in
+  --WrittenNote {letter = letter, offset = offset, octave = octave}
 
 type RelativeNote = RelativeNote Int
 
@@ -84,9 +94,6 @@ from (Pitch baseCode) (Pitch noteCode) =
 type alias AbsoluteNote = {pitch: Pitch, appliedOffset: Int}
 
 type WrittenNote = WrittenNote {letter: Letter, offset: Int, octave: Int}
-
-getOctave : WrittenNote -> Int
-getOctave (WrittenNote note) = note.octave
 
 toAbsolute : Pitch -> WrittenNote -> Pitch
 toAbsolute base (WrittenNote note) =

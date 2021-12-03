@@ -1,4 +1,7 @@
-module TabRenderer exposing (renderTab)
+module TabRenderer exposing 
+  ( renderTab
+  , viewLetter
+  )
 
 import Html exposing 
   ( Html
@@ -18,6 +21,7 @@ import Tab exposing
   ( TabSettings
   , Token(..)
   , Line(..)
+  , baseKey
   )
 import Note exposing 
   ( RelativeNote(..)
@@ -55,7 +59,7 @@ viewLyricWord word =
 viewToken : TabSettings -> Token -> Html msg
 viewToken settings token = 
       case token of
-        Note note -> viewNote settings.base settings.key note
+        Note note -> viewNote (baseKey settings) settings.key note
         Rest -> span [class "spacer"] []
         Bar -> span [class "bar"] [text "|"]
         Slur -> span [class "slur"] [text "("]
@@ -133,13 +137,13 @@ viewNoteText (WrittenNote note) =
 
 viewLetter : Letter -> Char
 viewLetter letter = case letter of 
-  A -> 'a'
-  B -> 'b'
-  C -> 'c'
-  D -> 'd'
-  E -> 'e'
-  F -> 'f'
-  G -> 'g'
+  A -> 'A'
+  B -> 'B'
+  C -> 'C'
+  D -> 'D'
+  E -> 'E'
+  F -> 'F'
+  G -> 'G'
   
 
 viewFinger : Finger -> Html msg
