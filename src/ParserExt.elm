@@ -1,8 +1,25 @@
-module ParserExt exposing (deadEndsToString)
+module ParserExt exposing 
+  ( deadEndsToString
+  , repeat
+  , prefixedLine
+  , countChar
+  )
 
 import Parser exposing
   ( DeadEnd
   , Problem(..)
+  , Parser
+  , map
+  , Step(..)
+  , oneOf
+  , loop
+  , chompUntilEndOr
+  , getChompedString
+  , (|=)
+  , (|.)
+  , token
+  , succeed
+  , chompWhile
   )
 
 deadEndsToString : List DeadEnd -> String
@@ -33,3 +50,24 @@ problemToString p =
     Problem s -> "problem " ++ s 
     BadRepeat -> "bad repeat" 
 
+
+repeat : Parser () -> Parser a -> Parser (List a)
+repeat final continue = 
+  loop [] (\state ->
+    oneOf
+      [ final |> map (\_ -> Done (List.reverse state))
+      , continue |> map (\s -> Loop (s :: state))
+      ]
+  )
+
+prefixedLine : String -> Parser String
+prefixedLine prefix = succeed identity
+  |. token prefix
+  |= getChompedString (chompUntilEndOr "\n")
+
+
+countChar : Char -> Parser Int
+countChar c =
+  chompWhile ((==) c) 
+    |> getChompedString
+    |> map String.length

@@ -6,23 +6,20 @@ import Parser exposing
   , (|=)
   , succeed
   , problem
-  , symbol
   , float
   , spaces
   , getChompedString
   , chompIf
-  , chompWhile
   , map
   , andThen
   , oneOf
   , token
-  , loop
-  , Step(..)
   , end
-  , lineComment
-  , chompUntilEndOr
-  , sequence
-  , Trailing(..)
+  )
+import ParserExt exposing
+  ( prefixedLine
+  , repeat
+  , countChar
   )
 import Note
 import Note exposing 
@@ -50,20 +47,9 @@ parseTabText =
         |> map Notes
       ]
 
-prefixedLine : String -> Parser String
-prefixedLine prefix = succeed identity
-  |. token prefix
-  |= getChompedString (chompUntilEndOr "\n")
   
 
-repeat : Parser () -> Parser a -> Parser (List a)
-repeat final continue = 
-  loop [] (\state ->
-    oneOf
-      [ final |> map (\_ -> Done (List.reverse state))
-      , continue |> map (\s -> Loop (s :: state))
-      ]
-  )
+
 
 parseNoteLine : Parser (List Token)
 parseNoteLine =
@@ -123,12 +109,6 @@ parseLetter =
         Just letter -> succeed {letter = letter, isUpper = Char.isUpper c}
         Nothing -> problem "Note letter must be between A and G"
       )
-
-countChar : Char -> Parser Int
-countChar c =
-  chompWhile ((==) c) 
-    |> getChompedString
-    |> map String.length
     
 parseNote : Parser ParsedNote
 parseNote = 
